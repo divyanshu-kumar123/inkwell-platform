@@ -5,6 +5,7 @@ import connectDB from './src/config/db.js';
 import { errorHandler } from './src/middlewares/error.middleware.js';
 import cookieParser from 'cookie-parser';
 import userRouter from './src/routes/user.routes.js'
+import publicationRouter from './src/routes/publication.routes.js';
 
 //Load the environment variables
 dotenv.config();
@@ -27,6 +28,7 @@ app.use(cookieParser());
 
 // ROUTER SETUP
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/publications", publicationRouter); 
 
 //Centalized error handler middleware
 app.use(errorHandler);
