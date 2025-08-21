@@ -5,26 +5,26 @@ import jwt from "jsonwebtoken"
 
 //Register
 //@route POST - /api/v1/users/register
-const registerUser = async (req, res) =>{
-    const {username, email, password} = req.body;
+const registerUser = async (req, res) => {
+    const { username, email, password } = req.body;
 
     //checking if any fields are empty
-    if([username, email, password].some((field)=>field?.trim()==="")){
+    if ([username, email, password].some((field) => field?.trim() === "")) {
         throw new ApiError(400, "All the fields are required");
     }
 
     //if user already exists
-    const existingUser = await User.findOne({$or :[{username}, {email}]});
-    if(existingUser){
+    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+    if (existingUser) {
         throw new ApiError(409, "User with this email or username already exists");
     }
 
     //create new user
-    const user = await User.create({username, email, password})
+    const user = await User.create({ username, email, password })
 
     //get the registered user
     const createdUser = await User.findById(user._id).select("-password -refreshToken");
-    if(!createdUser){
+    if (!createdUser) {
         throw new ApiError(500, "Something went wrong while registering the user");
     }
 
@@ -37,34 +37,34 @@ const registerUser = async (req, res) =>{
 //@Route Post - api/v1/users/login
 
 const loginUser = async (req, res) => {
-    const {username, email, password} = req.body;
+    const { username, email, password } = req.body;
 
     //validations
-    if(!(username || email)){
+    if (!(username || email)) {
         throw new ApiError(400, "Username or Email is required");
     }
-    if(!password){
+    if (!password) {
         throw new ApiError(400, "Password is required");
     }
 
     //Find user in database
-    const loggedUser = await User.findOne({$or : [{username}, {email}]});
+    const loggedUser = await User.findOne({ $or: [{ username }, { email }] });
 
-    if(!loggedUser){
+    if (!loggedUser) {
         throw new ApiError(401, "Invalid Credentials! User not found")
     }
-    
+
     //Match the password
     const isPasswordValid = await loggedUser.isPasswordCorrect(password);
-    
-    if(!isPasswordValid){
+
+    if (!isPasswordValid) {
         throw new ApiError(401, "Invalid Credentials! User not found")
     }
 
     const accessToken = loggedUser.generateAccessToken();
     const refreshToken = loggedUser.generateRefreshToken();
     loggedUser.refreshToken = refreshToken;
-    await loggedUser.save({validateBeforeSave : false});
+    await loggedUser.save({ validateBeforeSave: false });
 
     //get the loggedinuser
     const user = await User.findById(loggedUser._id).select("-password -refreshToken");
@@ -97,9 +97,9 @@ const logoutUser = async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $unset : {refreshToken : 1}
+            $unset: { refreshToken: 1 }
         },
-        {new : true}
+        { new: true }
     );
 
     //cookie options
@@ -182,10 +182,34 @@ const getCurrentUser = async (req, res) => {
 };
 
 
+//become a creator - change the existing role from reader to creator
+const becomeCreator = async (req, res) => {
+    const userId = req.user._id;
+
+    const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { $set: { role: 'CREATOR' } },
+        { new: true }
+    ).select("-password -refreshToken");
+
+    if (!updatedUser) {
+        throw new ApiError(404, "User not found");
+    }
+
+    if (updatedUser.role !== 'CREATOR') {
+        throw new ApiError(500, "Something went wrong.")
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, { user: updatedUser }, "User role upgraded to Creator successfully"));
+}
+
 export {
     registerUser,
     loginUser,
     logoutUser,
     getCurrentUser,
-    refreshAccessToken
+    refreshAccessToken,
+    becomeCreator
 }
