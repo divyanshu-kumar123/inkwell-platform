@@ -3,6 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './src/config/db.js';
 import { errorHandler } from './src/middlewares/error.middleware.js';
+import cookieParser from 'cookie-parser';
+import userRouter from './src/routes/user.routes.js'
 
 //Load the environment variables
 dotenv.config();
@@ -21,6 +23,10 @@ app.use(cors({
 
 app.use(express.json({limit : '16kb'}));
 app.use(express.urlencoded({extended:true, limit : '16kb'}));
+app.use(cookieParser());
+
+// ROUTER SETUP
+app.use("/api/v1/users", userRouter);
 
 //Centalized error handler middleware
 app.use(errorHandler);
